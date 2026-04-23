@@ -4,5 +4,15 @@
 
 publish(Event) ->
     Message = group_message:from_event(Event),
-    io:format("MSG: ~p~n", [Message]),
+    case Message of
+        undefined ->
+            ok;
+        _ ->
+            MessageMap = group_message:to_map(Message),
+            _Stored = chat_store:append_group_message(
+                chat_event:aggregate_id(Event),
+                MessageMap
+            ),
+            ok
+    end,
     ok.

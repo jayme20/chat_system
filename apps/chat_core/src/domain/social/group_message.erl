@@ -3,7 +3,8 @@
 -export([
     from_event/1,
     format/1,
-    classify/1
+    classify/1,
+    to_map/1
 ]).
 
 -record(message, {
@@ -76,8 +77,9 @@ classify(_) -> ignore.
 %% =========================================================
 
 format_financial(contribution_received, P) ->
+    DisplayAmount = maps:get(gross_amount, P, maps:get(amount, P)),
     io_lib:format("~p contributed Ksh ~p",
-        [maps:get(user_id, P), maps:get(amount, P)]);
+        [maps:get(user_id, P), DisplayAmount]);
 
 format_financial(withdrawal_completed, P) ->
     io_lib:format("Withdrawal of Ksh ~p completed",
@@ -129,3 +131,25 @@ format_system(_, _) ->
 
 format(Message) ->
     Message#message.text.
+
+to_map(#message{
+    group_id = GroupId,
+    type = Type,
+    text = Text,
+    metadata = Metadata,
+    timestamp = Timestamp
+}) ->
+    #{
+        group_id => GroupId,
+        type => atom_to_binary(Type, utf8),
+        text => to_binary(Text),
+        metadata => Metadata,
+        timestamp => Timestamp
+    }.
+
+to_binary(Bin) when is_binary(Bin) ->
+    Bin;
+to_binary(List) when is_list(List) ->
+    unicode:characters_to_binary(List);
+to_binary(Other) ->
+    unicode:characters_to_binary(io_lib:format("~p", [Other])).

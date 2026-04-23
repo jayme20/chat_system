@@ -4,7 +4,10 @@
     enqueue/2,
     process/0,
     retry/1,
-    schedule_retry/2
+    schedule_retry/2,
+    list_pending/0,
+    list_dead_letter/0,
+    retry_now/1
 ]).
 
 -record(job, {
@@ -102,4 +105,26 @@ execute(Payload) ->
 
         _ ->
             {error, unknown_job}
+    end.
+
+list_pending() ->
+    ets:match_object(retry_queue_table, {'_', '_'}).
+
+list_dead_letter() ->
+    ets:match_object(dead_letter_table, {'_', '_'}).
+
+retry_now(JobId) ->
+    case ets:lookup(dead_letter_table, JobId) of
+        [{JobId, Job}] ->
+            ets:delete(dead_letter_table, JobId),
+            schedule_retry(JobId, Job#job{attempts = 0}),
+            ok;
+        [] ->
+            case ets:lookup(retry_queue_table, JobId) of
+                [{JobId, Job}] ->
+                    retry(Job),
+                    ok;
+                [] ->
+                    {error, not_found}
+            end
     end.

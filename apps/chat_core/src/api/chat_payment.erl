@@ -3,34 +3,39 @@
 -export([contribute/4, withdraw/4]).
 
 contribute(GroupId, UserId, Amount, Receipt) ->
-    case event_store:exists(Receipt) of
-        true ->
-            {ok, duplicate};
+    case chat_store:lookup_group(GroupId) of
+        not_found ->
+            {error, group_not_found};
+        {ok, GroupState} ->
+            case event_store:exists(Receipt) of
+                true ->
+                    {ok, duplicate};
 
-        false ->
-            Fee = chat_fee_engine:calculate_contribution_fee(Amount, #{type => savings}),
+                false ->
+                    Fee = chat_fee_engine:calculate_contribution_fee(Amount, GroupState),
+                    Net = chat_fee_engine:apply_fee(Amount, Fee),
 
-            Net = chat_fee_engine:apply_fee(Amount, Fee),
+                    Event = chat_event:new(
+                        contribution_received,
+                        GroupId,
+                        wallet,
+                        #{
+                            user_id => UserId,
+                            amount => Net,
+                            gross_amount => Amount,
+                            fee => Fee,
+                            receipt => Receipt
+                        }
+                    ),
 
-            Event = chat_event:new(
-                contribution_received,
-                GroupId,
-                wallet,
-                #{
-                    user_id => UserId,
-                    amount => Net,
-                    fee => Fee,
-                    receipt => Receipt
-                }
-            ),
+                    event_store:append(Event),
+                    event_bus:publish(Event),
 
-            event_store:append(Event),
-            event_bus:publish(Event),
+                    chat_ledger:record_contribution(Receipt, GroupId, UserId, Net),
+                    chat_store:record_contribution(GroupId, UserId, Amount, Net),
 
-            chat_ledger:record_contribution(Receipt, GroupId, UserId, Net),
-            chat_store:record_contribution(GroupId, UserId, Amount, Net),
-
-            {ok, processed}
+                    {ok, processed}
+            end
     end.
 
 withdraw(GroupId, UserId, Amount, Role) ->

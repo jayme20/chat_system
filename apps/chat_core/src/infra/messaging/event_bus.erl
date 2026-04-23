@@ -6,6 +6,7 @@ publish(Event) ->
     StartUs = erlang:monotonic_time(microsecond),
     wallet_projection:update(Event),
     group_message_bus:publish(Event),
+    notification_service:handle_event(Event),
     fraud_engine:analyze(Event),
     telemetry:execute(
         [chat_system, event_bus, publish],

@@ -72,6 +72,7 @@ add_member_by_phone(GroupId, Role, Req0, State) ->
                         {ok, UserId} ->
                             case chat_group_service:add_member(GroupId, Role, UserId) of
                                 {ok, added} ->
+                            _ = compliance_service:role_change_audit(Role, GroupId, UserId, member),
                                     chat_api_response:success(
                                         #{member_status => added, phone => Phone},
                                         Req1,
@@ -123,6 +124,7 @@ update_member_role_by_phone(GroupId, Role, TargetRole, Req0, State) ->
                 {ok, UserId} ->
                     case chat_group_service:add_member(GroupId, Role, UserId, TargetRole) of
                         {ok, added} ->
+                            _ = compliance_service:role_change_audit(Role, GroupId, UserId, TargetRole),
                             chat_api_response:success(
                                 #{
                                     member_status => role_updated,

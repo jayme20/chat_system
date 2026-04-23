@@ -45,6 +45,7 @@ start_withdrawal(Request) ->
             ),
             event_store:append(CompletedEvent),
             event_bus:publish(CompletedEvent),
+            maybe_publish_fee_charge(Request),
             chat_ledger:record_withdrawal(
                 maps:get(withdrawal_id, Request),
                 maps:get(group_id, Request),
@@ -61,5 +62,34 @@ start_withdrawal(Request) ->
             ),
             event_store:append(FailedEvent),
             event_bus:publish(FailedEvent),
+            _ = ops_service:record_incident(
+                payout_failed,
+                critical,
+                open,
+                Request#{error => Reason}
+            ),
             {error, Reason}
+    end.
+
+maybe_publish_fee_charge(Request) ->
+    Fee = maps:get(fee, Request, 0),
+    case Fee > 0 of
+        true ->
+            FeeEvent = chat_event:new(
+                fee_charged,
+                maps:get(group_id, Request),
+                wallet,
+                #{
+                    withdrawal_id => maps:get(withdrawal_id, Request),
+                    user_id => maps:get(user_id, Request),
+                    amount => Fee,
+                    fee => Fee,
+                    reason => withdrawal_fee
+                }
+            ),
+            event_store:append(FeeEvent),
+            event_bus:publish(FeeEvent),
+            ok;
+        false ->
+            ok
     end.

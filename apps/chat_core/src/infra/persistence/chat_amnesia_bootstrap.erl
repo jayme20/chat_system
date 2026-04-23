@@ -12,7 +12,15 @@
     groups,
     group_members,
     sessions,
-    otp_codes
+    otp_codes,
+    sync_group_seq,
+    sync_group_messages,
+    sync_group_acks,
+    compliance_cases,
+    disputes,
+    audit_logs,
+    notifications,
+    ops_incidents
 ]).
 
 ensure_started() ->
@@ -75,6 +83,61 @@ ensure_table(otp_codes) ->
         {disc_copies, [node()]},
         {type, set},
         {index, [user_id]}
+    ]);
+ensure_table(sync_group_seq) ->
+    create_table(sync_group_seq, [
+        {attributes, [group_id, seq]},
+        {disc_copies, [node()]},
+        {type, set}
+    ]);
+ensure_table(sync_group_messages) ->
+    create_table(sync_group_messages, [
+        {attributes, [key, group_id, seq, payload, stored_at]},
+        {disc_copies, [node()]},
+        {type, ordered_set},
+        {index, [group_id]}
+    ]);
+ensure_table(sync_group_acks) ->
+    create_table(sync_group_acks, [
+        {attributes, [key, group_id, user_id, device_id, ack_seq, updated_at]},
+        {disc_copies, [node()]},
+        {type, set},
+        {index, [group_id, user_id]}
+    ]);
+ensure_table(compliance_cases) ->
+    create_table(compliance_cases, [
+        {attributes, [case_id, user_id, type, status, payload, created_at, updated_at]},
+        {disc_copies, [node()]},
+        {type, ordered_set},
+        {index, [user_id, type, status]}
+    ]);
+ensure_table(disputes) ->
+    create_table(disputes, [
+        {attributes, [dispute_id, group_id, user_id, status, payload, created_at, updated_at]},
+        {disc_copies, [node()]},
+        {type, ordered_set},
+        {index, [group_id, user_id, status]}
+    ]);
+ensure_table(audit_logs) ->
+    create_table(audit_logs, [
+        {attributes, [log_id, actor_id, action, entity_type, entity_id, payload, created_at]},
+        {disc_copies, [node()]},
+        {type, ordered_set},
+        {index, [actor_id, action, entity_type]}
+    ]);
+ensure_table(notifications) ->
+    create_table(notifications, [
+        {attributes, [notification_id, user_id, channel, status, payload, created_at, updated_at]},
+        {disc_copies, [node()]},
+        {type, ordered_set},
+        {index, [user_id, channel, status]}
+    ]);
+ensure_table(ops_incidents) ->
+    create_table(ops_incidents, [
+        {attributes, [incident_id, type, severity, status, payload, created_at, updated_at]},
+        {disc_copies, [node()]},
+        {type, ordered_set},
+        {index, [type, severity, status]}
     ]).
 
 create_table(Name, Opts) ->
