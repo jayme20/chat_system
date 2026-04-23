@@ -1,0 +1,16 @@
+{application, chat_core, [
+    {description, "Event-driven chat + fintech system"},
+    {vsn, "1.0.0"},
+    {modules, []},
+    {registered, [
+        chat_core_app
+    ]},
+    {applications, [
+        kernel,
+        stdlib,
+        crypto,
+        telemetry,
+        telemetry_poller
+    ]},
+    {mod, {chat_core_app, []}}
+]}.

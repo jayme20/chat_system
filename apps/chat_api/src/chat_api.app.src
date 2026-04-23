@@ -1,0 +1,17 @@
+{application, chat_api, [
+    {description, "HTTP API Gateway"},
+    {vsn, "1.0.0"},
+    {modules, []},
+    {registered, [
+        chat_api_app
+    ]},
+    {applications, [
+        kernel,
+        stdlib,
+        cowboy,
+        cowlib,
+        ranch,
+        chat_core
+    ]},
+    {mod, {chat_api_app, []}}
+]}.
