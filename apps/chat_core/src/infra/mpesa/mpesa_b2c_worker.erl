@@ -27,13 +27,39 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 start_withdrawal(Request) ->
-    mpesa_b2c_api:send(Request),
-    Event = chat_event:new(
+    ProcessingEvent = chat_event:new(
         withdrawal_processing,
         maps:get(group_id, Request),
         wallet,
         Request
     ),
-    event_store:append(Event),
-    event_bus:publish(Event),
-    {ok, processing}.
+    event_store:append(ProcessingEvent),
+    event_bus:publish(ProcessingEvent),
+    case mpesa_b2c_api:send(Request) of
+        {ok, _WithdrawalId} ->
+            CompletedEvent = chat_event:new(
+                withdrawal_completed,
+                maps:get(group_id, Request),
+                wallet,
+                Request
+            ),
+            event_store:append(CompletedEvent),
+            event_bus:publish(CompletedEvent),
+            chat_ledger:record_withdrawal(
+                maps:get(withdrawal_id, Request),
+                maps:get(group_id, Request),
+                maps:get(user_id, Request),
+                maps:get(amount, Request)
+            ),
+            {ok, processing};
+        {error, Reason} ->
+            FailedEvent = chat_event:new(
+                withdrawal_failed,
+                maps:get(group_id, Request),
+                wallet,
+                Request#{reason => Reason}
+            ),
+            event_store:append(FailedEvent),
+            event_bus:publish(FailedEvent),
+            {error, Reason}
+    end.

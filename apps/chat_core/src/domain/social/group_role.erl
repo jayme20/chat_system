@@ -12,5 +12,6 @@ is_admin(admin) -> true;
 is_admin(_) -> false.
 
 can_manage_finances(creator) -> true;
+can_manage_finances(admin) -> true;
 can_manage_finances(treasurer) -> true;
 can_manage_finances(_) -> false.

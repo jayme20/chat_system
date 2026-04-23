@@ -67,24 +67,26 @@ fraud_locked(Group) ->
     end.
 
 withdrawal_allowed_by_purpose(Group) ->
-    Purpose = maps:get(purpose, Group, undefined),
+    Purpose = normalize_purpose(maps:get(purpose, Group, undefined)),
+    lists:member(Purpose, [savings, welfare, emergency, investment, event]).
 
-    case Purpose of
-        savings ->
-            false; 
-
-        welfare ->
-            false;  
-
-        emergency ->
-            true;
-
-        investment ->
-            true;
-
-        event ->
-            true;
-
-        _ ->
-            false
-    end.
+normalize_purpose(Purpose) when is_binary(Purpose) ->
+    case string:lowercase(Purpose) of
+        <<"savings">> -> savings;
+        <<"welfare">> -> welfare;
+        <<"emergency">> -> emergency;
+        <<"investment">> -> investment;
+        <<"event">> -> event;
+        _ -> undefined
+    end;
+normalize_purpose(Purpose) when is_list(Purpose) ->
+    case string:lowercase(Purpose) of
+        "savings" -> savings;
+        "welfare" -> welfare;
+        "emergency" -> emergency;
+        "investment" -> investment;
+        "event" -> event;
+        _ -> undefined
+    end;
+normalize_purpose(Purpose) ->
+    Purpose.
